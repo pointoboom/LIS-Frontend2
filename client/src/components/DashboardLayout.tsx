@@ -1,10 +1,13 @@
-import { Layout, Button, Drawer } from 'antd';
-import { LogoutOutlined, MenuOutlined } from '@ant-design/icons';
 import { useLocation } from 'wouter';
-import { useState } from 'react';
-import Sidebar from './Sidebar';
-
-const { Header, Sider, Content } = Layout;
+import { Button } from '@/components/ui/button';
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import AppSidebar from './AppSidebar';
+import { LogOut, Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -12,7 +15,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [, setLocation] = useLocation();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { toggleTheme, switchable } = useTheme();
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated');
@@ -20,53 +23,45 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <Layout className="min-h-screen">
-      {/* Desktop Sidebar - visible on medium screens and up */}
-      <Sider width={250} className="bg-white hidden md:block">
-        <Sidebar />
-      </Sider>
-      
-      {/* Mobile Drawer - visible on small screens */}
-      <Drawer
-        title="Menu"
-        placement="left"
-        onClose={() => setDrawerOpen(false)}
-        open={drawerOpen}
-        styles={{ body: { padding: 0 } }}
-      >
-        <Sidebar />
-      </Drawer>
-      
-      <Layout>
-        <Header className="bg-gray-50 border-b border-gray-200 px-6 flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-4">
-            {/* Hamburger Menu - visible only on small screens */}
-            <Button
-              icon={<MenuOutlined />}
-              type="text"
-              size="large"
-              onClick={() => setDrawerOpen(true)}
-              className="md:hidden"
-            />
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-              <p className="text-sm text-gray-500">Welcome back, Admin</p>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="sticky top-0 z-20 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger className="text-white hover:bg-white/10" />
+              <div>
+                <h1 className="text-xl sm:text-2xl font-semibold leading-tight">Dashboard</h1>
+                <p className="text-white/80 text-xs sm:text-sm">Welcome back, Admin</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {switchable && (
+                <Button
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                  onClick={toggleTheme}
+                  title="Toggle theme"
+                >
+                  <Sun className="hidden dark:block" />
+                  <Moon className="block dark:hidden" />
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-2" /> Logout
+              </Button>
             </div>
           </div>
-          <Button 
-            icon={<LogoutOutlined />} 
-            onClick={handleLogout}
-            type="text"
-            danger
-            size="large"
-          >
-            Logout
-          </Button>
-        </Header>
-        <Content className="p-6 bg-gray-50">
+        </header>
+
+        <main className="p-4 sm:p-6 bg-background min-h-[calc(100svh-64px)]">
           {children}
-        </Content>
-      </Layout>
-    </Layout>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

@@ -49,7 +49,7 @@ function App() {
       >
         <ThemeProvider
           defaultTheme="light"
-          // switchable
+          switchable
         >
           <TooltipProvider>
             <Toaster />

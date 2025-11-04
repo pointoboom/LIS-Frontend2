@@ -40,5 +40,14 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    proxy: {
+      // Dev-time proxy to avoid CORS for the LIS API
+      '/api': {
+        target: 'http://163.47.10.13:8080',
+        changeOrigin: true,
+        // Do not rewrite, since backend already prefixes with /api
+        // rewrite: (p) => p,
+      },
+    },
   },
 });
