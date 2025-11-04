@@ -118,6 +118,8 @@ export default function Dashboard() {
   // Filters
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
   const [toDate, setToDate] = useState<Date | undefined>(undefined);
+  const [openFrom, setOpenFrom] = useState(false);
+  const [openTo,   setOpenTo]   = useState(false);
 
   function parseDateLike(d: string): number | null {
     if (!d) return null;
@@ -272,7 +274,7 @@ export default function Dashboard() {
                 <CardDescription>Recent laboratory results from LIS</CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <Popover>
+                <Popover open={openFrom} onOpenChange={setOpenFrom}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2">
                       <CalendarIcon className="size-4" />
@@ -283,7 +285,7 @@ export default function Dashboard() {
                     <Calendar
                       mode="single"
                       selected={fromDate}
-                      onSelect={(d) => setFromDate(d)}
+                      onSelect={(d) => { setFromDate(d); if (d) setOpenFrom(false); }}
                       initialFocus
                       formatters={{
                         formatCaption: (month) => month.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' }),
@@ -295,7 +297,7 @@ export default function Dashboard() {
 
                 <span className="text-sm text-muted-foreground">ถึง</span>
 
-                <Popover>
+                <Popover open={openTo} onOpenChange={setOpenTo}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2">
                       <CalendarIcon className="size-4" />
@@ -306,7 +308,7 @@ export default function Dashboard() {
                     <Calendar
                       mode="single"
                       selected={toDate}
-                      onSelect={(d) => setToDate(d)}
+                      onSelect={(d) => { setToDate(d); if (d) setOpenTo(false); }}
                       initialFocus
                       formatters={{
                         formatCaption: (month) => month.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' }),
