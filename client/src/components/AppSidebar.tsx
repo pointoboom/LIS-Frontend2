@@ -51,7 +51,7 @@ export default function AppSidebar() {
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
+              {/* <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   isActive={location === "/dashboard/reports"}
@@ -61,8 +61,8 @@ export default function AppSidebar() {
                     <span>Reports</span>
                   </a>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
+              </SidebarMenuItem> */}
+              {/* <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   isActive={location === "/dashboard/category"}
@@ -72,8 +72,8 @@ export default function AppSidebar() {
                     <span>Category</span>
                   </a>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
+              </SidebarMenuItem> */}
+              {/* <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   isActive={location === "/dashboard/blood"}
@@ -83,7 +83,7 @@ export default function AppSidebar() {
                     <span>Blood</span>
                   </a>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
+              </SidebarMenuItem> */}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

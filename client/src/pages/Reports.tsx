@@ -1,9 +1,12 @@
-import { Card, Button, Space, Divider, Tag, Image } from 'antd';
-import { FilePdfOutlined, FileImageOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import DashboardLayout from '@/components/DashboardLayout';
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { ArrowLeft, FileImage, FileDown } from 'lucide-react';
 
 // Import the bundled sample report
 // Note: tsconfig enables resolveJsonModule to allow this import
@@ -75,19 +78,19 @@ function formatDate(input?: string | number): string {
   }
 }
 
-function flagColor(flag?: string | null): string {
+function flagBadgeClass(flag?: string | null): string {
   switch ((flag || '').toUpperCase()) {
     case 'H':
-      return 'red';
-    case 'L':
-      return 'volcano';
-    case 'A':
     case 'HH':
+      return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800';
+    case 'L':
     case 'LL':
-      return 'orange';
+      return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800';
+    case 'A':
+      return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800';
     case 'N':
     default:
-      return 'green';
+      return 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800';
   }
 }
 
@@ -147,132 +150,142 @@ export default function Reports() {
     <DashboardLayout>
       <div className="space-y-6">
         <Card className="shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <Button
-                icon={<ArrowLeftOutlined />}
-                onClick={() => setLocation('/dashboard')}
-                type="text"
-              >
-                Back
-              </Button>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Report</h2>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <Tag color="blue">_id: {overallId}</Tag>
-                  {obr.filler_order ? <Tag color="geekblue">OBR Filler: {obr.filler_order}</Tag> : null}
-                  {obr.service?.id ? <Tag color="purple">Service: {obr.service.id}</Tag> : null}
-                  {pid.alias_patient ? <Tag color="green">Patient: {pid.alias_patient}</Tag> : null}
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" onClick={() => setLocation('/dashboard')} className="gap-2">
+                  <ArrowLeft className="size-4" /> Back
+                </Button>
+                <div>
+                  <CardTitle>Report</CardTitle>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <Badge className="bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800">_id: {overallId}</Badge>
+                    {obr.filler_order ? (
+                      <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-200 dark:border-indigo-800">
+                        OBR Filler: {obr.filler_order}
+                      </Badge>
+                    ) : null}
+                    {obr.service?.id ? (
+                      <Badge className="bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-200 dark:border-purple-800">
+                        Service: {obr.service.id}
+                      </Badge>
+                    ) : null}
+                    {pid.alias_patient ? (
+                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800">
+                        Patient: {pid.alias_patient}
+                      </Badge>
+                    ) : null}
+                  </div>
                 </div>
               </div>
-            </div>
-            <Space size="middle">
-              <Button
-                icon={<FileImageOutlined />}
-                onClick={() => handleExport('PNG')}
-                size="large"
-              >
-                PNG
-              </Button>
-              <Button
-                icon={<FilePdfOutlined />}
-                type="primary"
-                onClick={() => handleExport('PDF')}
-                size="large"
-              >
-                PDF
-              </Button>
-            </Space>
-          </div>
-
-          <Divider />
-
-          {/* MSH + Received */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-indigo-800">MSH</h3>
-              <div className="text-gray-700 mt-2 space-y-1">
-                <p><strong>Sending App:</strong> {data.msh?.sending_app || '-'}</p>
-                <p><strong>Sending Fac:</strong> {data.msh?.sending_fac || '-'}</p>
-                <p><strong>Receiving App:</strong> {data.msh?.receiving_app || '-'}</p>
-                <p><strong>Receiving Fac:</strong> {data.msh?.receiving_fac || '-'}</p>
-                <p><strong>Message Time:</strong> {formatDate(mshTs)}</p>
-                <p><strong>Received At:</strong> {formatDate(receivedTs)}</p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => handleExport('PNG')} className="gap-2">
+                  <FileImage className="size-4" /> PNG
+                </Button>
+                <Button onClick={() => handleExport('PDF')} className="gap-2">
+                  <FileDown className="size-4" /> PDF
+                </Button>
               </div>
             </div>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-emerald-800">PID</h3>
-              <div className="text-gray-700 mt-2 space-y-1">
-                <p><strong>Alias:</strong> {pid.alias_patient || '-'}</p>
-                <p><strong>Patient ID:</strong> {pid.patient_id || '-'}</p>
-                <p><strong>Alt Patient ID:</strong> {pid.alt_patient_id || '-'}</p>
-                <p><strong>DOB:</strong> {formatDate(pid.dob)}</p>
-                <p><strong>Sex:</strong> {pid.sex || '-'}</p>
-              </div>
-            </div>
-          </div>
+          </CardHeader>
+          <CardContent>
+            <Separator className="my-4" />
 
-          {/* OBR */}
-          <div className="mb-4">
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-purple-800">OBR</h3>
-              <div className="text-gray-700 mt-2 space-y-1">
+            {/* MSH + Received */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <Card className="border-indigo-200 bg-indigo-50 dark:bg-indigo-950/30">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-indigo-800 dark:text-indigo-200">MSH</CardTitle>
+                </CardHeader>
+                <CardContent className="text-gray-700 dark:text-gray-300 space-y-1 text-sm">
+                  <p><strong>Sending App:</strong> {data.msh?.sending_app || '-'}</p>
+                  <p><strong>Sending Fac:</strong> {data.msh?.sending_fac || '-'}</p>
+                  <p><strong>Receiving App:</strong> {data.msh?.receiving_app || '-'}</p>
+                  <p><strong>Receiving Fac:</strong> {data.msh?.receiving_fac || '-'}</p>
+                  <p><strong>Message Time:</strong> {formatDate(mshTs)}</p>
+                  <p><strong>Received At:</strong> {formatDate(receivedTs)}</p>
+                </CardContent>
+              </Card>
+              <Card className="border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-emerald-800 dark:text-emerald-200">PID</CardTitle>
+                </CardHeader>
+                <CardContent className="text-gray-700 dark:text-gray-300 space-y-1 text-sm">
+                  <p><strong>Alias:</strong> {pid.alias_patient || '-'}</p>
+                  <p><strong>Patient ID:</strong> {pid.patient_id || '-'}</p>
+                  <p><strong>Alt Patient ID:</strong> {pid.alt_patient_id || '-'}</p>
+                  <p><strong>DOB:</strong> {formatDate(pid.dob)}</p>
+                  <p><strong>Sex:</strong> {pid.sex || '-'}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* OBR */}
+            <Card className="mb-4 border-purple-200 bg-purple-50 dark:bg-purple-950/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-purple-800 dark:text-purple-200">OBR</CardTitle>
+              </CardHeader>
+              <CardContent className="text-gray-700 dark:text-gray-300 space-y-1 text-sm">
                 <p><strong>Service:</strong> {obr.service?.text || obr.service?.id || '-'}</p>
                 <p><strong>Filler Order:</strong> {obr.filler_order || '-'}</p>
                 <p><strong>Placer Order:</strong> {obr.placer_order || '-'}</p>
                 <p><strong>Observation Time:</strong> {formatDate(obr.observation_datetime)}</p>
-              </div>
-            </div>
-          </div>
+              </CardContent>
+            </Card>
 
-          {/* OBX Results */}
-          <div className="bg-purple-100 border border-purple-300 rounded-lg p-4">
-            <h3 className="text-xl font-bold text-purple-900 mb-4">OBX Results</h3>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Text</TableHead>
-                    <TableHead>Value</TableHead>
-                    <TableHead>Units</TableHead>
-                    <TableHead>Reference</TableHead>
-                    <TableHead>Flag</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {observations.map((o, idx) => {
-                    const units = typeof o.units === 'string' ? o.units : (o.units?.id || '');
-                    const code = o.id?.id || '';
-                    const text = o.id?.text || '';
-                    const ref = o.ref_range || '';
-                    const flag = o.abnormal_flags || 'N';
-                    const imgSrc = o.value_type === 'ED' ? parseEdToImageSrc(o.value) : undefined;
-                    return (
-                      <TableRow key={`${code}-${idx}`}>
-                        <TableCell className="font-medium">{code}</TableCell>
-                        <TableCell>{text}</TableCell>
-                        <TableCell>
-                          {imgSrc ? (
-                            <div className="py-2">
-                              <Image src={imgSrc} alt={code || 'observation-image'} style={{ maxHeight: 160 }} />
-                            </div>
-                          ) : (
-                            <span>{o.value ?? '-'}</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{units}</TableCell>
-                        <TableCell>{ref}</TableCell>
-                        <TableCell>
-                          <Tag color={flagColor(flag)}>{flag || 'N'}</Tag>
-                        </TableCell>
+            {/* OBX Results */}
+            <Card className="border-purple-300 bg-purple-100 dark:bg-purple-950/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-purple-900 dark:text-purple-100">OBX Results</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Text</TableHead>
+                        <TableHead>Value</TableHead>
+                        <TableHead>Units</TableHead>
+                        <TableHead>Reference</TableHead>
+                        <TableHead>Flag</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+                    </TableHeader>
+                    <TableBody>
+                      {observations.map((o, idx) => {
+                        const units = typeof o.units === 'string' ? o.units : (o.units?.id || '');
+                        const code = o.id?.id || '';
+                        const text = o.id?.text || '';
+                        const ref = o.ref_range || '';
+                        const flag = o.abnormal_flags || 'N';
+                        const imgSrc = o.value_type === 'ED' ? parseEdToImageSrc(o.value) : undefined;
+                        return (
+                          <TableRow key={`${code}-${idx}`}>
+                            <TableCell className="font-medium">{code}</TableCell>
+                            <TableCell>{text}</TableCell>
+                            <TableCell>
+                              {imgSrc ? (
+                                <div className="py-2">
+                                  <img src={imgSrc} alt={code || 'observation-image'} className="max-h-40 rounded border" />
+                                </div>
+                              ) : (
+                                <span>{o.value ?? '-'}</span>
+                              )}
+                            </TableCell>
+                            <TableCell>{units}</TableCell>
+                            <TableCell>{ref}</TableCell>
+                            <TableCell>
+                              <Badge className={flagBadgeClass(flag)}>{flag || 'N'}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </CardContent>
         </Card>
       </div>
     </DashboardLayout>

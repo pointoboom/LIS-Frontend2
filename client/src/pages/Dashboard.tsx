@@ -18,6 +18,9 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from '@/components/ui/pagination';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -113,8 +116,8 @@ export default function Dashboard() {
   }, [reports]);
 
   // Filters
-  const [fromDate, setFromDate] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [toDate, setToDate] = useState<Date | undefined>(undefined);
 
   function parseDateLike(d: string): number | null {
     if (!d) return null;
@@ -133,8 +136,8 @@ export default function Dashboard() {
   }
 
   const filteredRows = useMemo(() => {
-    const start = fromDate ? new Date(fromDate + 'T00:00:00').getTime() : null;
-    const end = toDate ? new Date(toDate + 'T23:59:59').getTime() : null;
+    const start = fromDate ? new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0).getTime() : null;
+    const end = toDate ? new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23, 59, 59).getTime() : null;
     if (!start && !end) return lisResults;
     return lisResults.filter(r => {
       const t = parseDateLike(r.collected);
@@ -158,6 +161,15 @@ export default function Dashboard() {
   useEffect(() => {
     setPage(1);
   }, [fromDate, toDate, reports.length]);
+
+  function formatThai(d?: Date) {
+    if (!d) return '';
+    return d.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
 
   function buildVisiblePages(current: number, total: number): (number | 'ellipsis')[] {
     const result: (number | 'ellipsis')[] = [];
@@ -193,7 +205,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card
             onClick={() => setLocation('/dashboard/reports')}
             className="cursor-pointer hover:shadow-lg transition-shadow border-0 bg-white dark:bg-card"
@@ -227,7 +239,7 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
 
         <Card className="shadow-sm">
           <CardHeader>
@@ -260,22 +272,51 @@ export default function Dashboard() {
                 <CardDescription>Recent laboratory results from LIS</CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="h-9 rounded-md border px-2 text-sm bg-background"
-                  aria-label="From date"
-                />
-                <span className="text-sm text-muted-foreground">to</span>
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="h-9 rounded-md border px-2 text-sm bg-background"
-                  aria-label="To date"
-                />
-                <Button variant="ghost" size="sm" onClick={() => { setFromDate(''); setToDate(''); }}>Clear</Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <CalendarIcon className="size-4" />
+                      {fromDate ? formatThai(fromDate) : 'จากวันที่'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={fromDate}
+                      onSelect={(d) => setFromDate(d)}
+                      initialFocus
+                      formatters={{
+                        formatCaption: (month) => month.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' }),
+                        formatWeekdayName: (d) => d.toLocaleDateString('th-TH', { weekday: 'short' }),
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <span className="text-sm text-muted-foreground">ถึง</span>
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <CalendarIcon className="size-4" />
+                      {toDate ? formatThai(toDate) : 'ถึงวันที่'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={toDate}
+                      onSelect={(d) => setToDate(d)}
+                      initialFocus
+                      formatters={{
+                        formatCaption: (month) => month.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' }),
+                        formatWeekdayName: (d) => d.toLocaleDateString('th-TH', { weekday: 'short' }),
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <Button variant="ghost" size="sm" onClick={() => { setFromDate(undefined); setToDate(undefined); }}>ล้าง</Button>
                 <Button size="sm" onClick={fetchReports} disabled={loading}>
                   {loading ? <span className="opacity-70">Refreshing...</span> : 'Refresh'}
                 </Button>
