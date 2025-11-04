@@ -62,7 +62,8 @@ export default function Dashboard() {
     filler_order: string;
     service_id: string;
     service_text: string;
-    received_at: string;
+    received_at: string; // display: DD MMMM YYYY
+    received_ts: number | null; // ms for sort/filter
   };
 
   const [loading, setLoading] = useState(false);
@@ -109,46 +110,52 @@ export default function Dashboard() {
     };
   }, []);
 
-  function formatReceivedAt(raw: any): string {
-    // Attempt to resolve to ms
-    const toMs = (v: any): number | null => {
-      if (v == null) return null;
-      if (typeof v === 'number') return v;
-      if (typeof v === 'string') {
-        if (/^\d+$/.test(v)) {
-          const ms = Number(v);
-          return isNaN(ms) ? null : ms;
-        }
-        // HL7 like YYYYMMDD[HHmmss]
-        if (/^\d{8,14}$/.test(v)) {
-          const year = Number(v.slice(0, 4));
-          const month = Number(v.slice(4, 6)) - 1;
-          const day = Number(v.slice(6, 8));
-          const hh = Number(v.slice(8, 10) || '0');
-          const mm = Number(v.slice(10, 12) || '0');
-          const ss = Number(v.slice(12, 14) || '0');
-          return Date.UTC(year, month, day, hh, mm, ss);
-        }
-        const t = Date.parse(v);
-        return isNaN(t) ? null : t;
+  function toMs(v: any): number | null {
+    if (v == null) return null;
+    if (typeof v === 'number') return v;
+    if (typeof v === 'string') {
+      // Custom format: YYYY-MM-DD HH:mm:ss.SSS +HH:MM:SS (e.g., 2025-11-03 15:38:23.244 +00:00:00)
+      const m = v.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))? ([+-]\d{2}):(\d{2}):(\d{2})$/);
+      if (m) {
+        const [_, y, mo, da, hh, mi, ss, msStr, offH, offM, offS] = m;
+        const ms = Number(msStr || '0');
+        const sign = offH.startsWith('-') ? -1 : 1;
+        const offHours = Math.abs(Number(offH));
+        const offsetMs = sign * ((offHours * 60 + Number(offM)) * 60 + Number(offS)) * 1000;
+        const t = Date.UTC(Number(y), Number(mo) - 1, Number(da), Number(hh), Number(mi), Number(ss), ms);
+        return t - offsetMs;
       }
-      return null;
-    };
+      if (/^\d+$/.test(v)) {
+        const ms = Number(v);
+        return isNaN(ms) ? null : ms;
+      }
+      // HL7 like YYYYMMDD[HHmmss]
+      if (/^\d{8,14}$/.test(v)) {
+        const year = Number(v.slice(0, 4));
+        const month = Number(v.slice(4, 6)) - 1;
+        const day = Number(v.slice(6, 8));
+        const hh = Number(v.slice(8, 10) || '0');
+        const mm = Number(v.slice(10, 12) || '0');
+        const ss = Number(v.slice(12, 14) || '0');
+        return Date.UTC(year, month, day, hh, mm, ss);
+      }
+      const t = Date.parse(v);
+      return isNaN(t) ? null : t;
+    }
+    return null;
+  }
 
-    const ms = toMs(raw);
-    if (ms == null) return String(raw ?? '-');
+  function formatDisplayDate(ms: number | null): string {
+    if (ms == null) return '-';
     const d = new Date(ms);
-    const pad = (n: number, w = 2) => String(n).padStart(w, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const month = months[d.getUTCMonth()];
     const yyyy = d.getUTCFullYear();
-    const MM = pad(d.getUTCMonth() + 1);
-    const dd = pad(d.getUTCDate());
-    const HH = pad(d.getUTCHours());
-    const mm = pad(d.getUTCMinutes());
-    const ss = pad(d.getUTCSeconds());
-    const SSS = pad(d.getUTCMilliseconds(), 3);
-    // Fixed UTC offset format like "+00:00:00" per example
-    const tz = '+00:00:00';
-    return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}.${SSS} ${tz}`;
+    return `${dd} ${month} ${yyyy}`;
   }
 
   const lisResults: Row[] = useMemo(() => {
@@ -169,7 +176,8 @@ export default function Dashboard() {
 
         // Received at prioritizes root received_at field; format per required style
         const receivedAtRaw = r?.received_at?.$date?.$numberLong ?? r?.received_at ?? obr.observation_datetime ?? '-';
-        const received_at = formatReceivedAt(receivedAtRaw);
+        const received_ts = toMs(receivedAtRaw);
+        const received_at = formatDisplayDate(received_ts);
 
         rows.push({
           id: idForNav,
@@ -180,6 +188,7 @@ export default function Dashboard() {
           service_id: String(service.id || r.test || '-'),
           service_text: String(service.text || r.test_name || '-'),
           received_at,
+          received_ts,
         });
       };
 
@@ -206,37 +215,7 @@ export default function Dashboard() {
   const [sortKey, setSortKey] = useState<keyof Row | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
-  function parseDateLike(d: string): number | null {
-    if (!d) return null;
-    // If HL7 like YYYYMMDD[HHmmss]
-    if (/^\d{8,14}$/.test(d)) {
-      const year = Number(d.slice(0, 4));
-      const month = Number(d.slice(4, 6)) - 1;
-      const day = Number(d.slice(6, 8));
-      const hh = Number(d.slice(8, 10) || '0');
-      const mm = Number(d.slice(10, 12) || '0');
-      const ss = Number(d.slice(12, 14) || '0');
-      return new Date(year, month, day, hh, mm, ss).getTime();
-    }
-    // Custom format: YYYY-MM-DD HH:mm:ss.SSS +HH:MM:SS (we use UTC +00:00:00)
-    const m = d.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))? ([+-]\d{2}):(\d{2}):(\d{2})$/);
-    if (m) {
-      const [_, y, mo, da, hh, mi, ss, msStr, offH, offM, offS] = m;
-      const ms = Number(msStr || '0');
-      const sign = offH.startsWith('-') ? -1 : 1;
-      const offHours = Math.abs(Number(offH));
-      const offsetMs = sign * ((offHours * 60 + Number(offM)) * 60 + Number(offS)) * 1000;
-      const t = Date.UTC(Number(y), Number(mo) - 1, Number(da), Number(hh), Number(mi), Number(ss), ms);
-      return t - offsetMs;
-    }
-    // If milliseconds timestamp
-    if (/^\d{12,}$/.test(d)) {
-      const ms = Number(d);
-      return isNaN(ms) ? null : ms;
-    }
-    const t = Date.parse(d);
-    return isNaN(t) ? null : t;
-  }
+  // parseDateLike not needed anymore; using received_ts directly
 
   const filteredRows = useMemo(() => {
     const start = fromDate ? new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0).getTime() : null;
@@ -244,7 +223,7 @@ export default function Dashboard() {
     let out = lisResults;
     if (start || end) {
       out = out.filter(r => {
-        const t = parseDateLike(r.received_at);
+        const t = r.received_ts;
         if (t == null) return false;
         if (start && t < start) return false;
         if (end && t > end) return false;
@@ -273,8 +252,8 @@ export default function Dashboard() {
       const dir = sortDir === 'asc' ? 1 : -1;
       const k = sortKey as keyof Row;
       if (k === 'received_at') {
-        const av = parseDateLike(a.received_at) ?? 0;
-        const bv = parseDateLike(b.received_at) ?? 0;
+        const av = a.received_ts ?? 0;
+        const bv = b.received_ts ?? 0;
         return (av - bv) * dir;
       }
       const av = String(a[k] ?? '').toLowerCase();
@@ -443,98 +422,7 @@ export default function Dashboard() {
                 <CardTitle>LIS Results</CardTitle>
                 <CardDescription>Recent laboratory results from LIS</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                {/* <ButtonGroup>
-                  <Button
-                    variant={preset === '1d' ? 'secondary' : 'outline'}
-                    size="sm"
-                    onClick={() => applyPreset('1d')}
-                  >
-                    1วัน
-                  </Button>
-                  <ButtonGroupSeparator />
-                  <Button
-                    variant={preset === '3d' ? 'secondary' : 'outline'}
-                    size="sm"
-                    onClick={() => applyPreset('3d')}
-                  >
-                    3วัน
-                  </Button>
-                  <ButtonGroupSeparator />
-                  <Button
-                    variant={preset === '7d' ? 'secondary' : 'outline'}
-                    size="sm"
-                    onClick={() => applyPreset('7d')}
-                  >
-                    7วัน
-                  </Button>
-                  <ButtonGroupSeparator />
-                  <Button
-                    variant={preset === '1m' ? 'secondary' : 'outline'}
-                    size="sm"
-                    onClick={() => applyPreset('1m')}
-                  >
-                    1 เดือน
-                  </Button>
-                </ButtonGroup> */}
-
-                <Popover open={openFrom} onOpenChange={setOpenFrom}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <CalendarIcon className="size-4" />
-                      {fromDate ? formatThai(fromDate) : 'จากวันที่'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={fromDate}
-                      onSelect={(d) => { setFromDate(d); setPreset(null); if (d) setOpenFrom(false); }}
-                      initialFocus
-                      formatters={{
-                        formatCaption: (month) => month.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' }),
-                        formatWeekdayName: (d) => d.toLocaleDateString('th-TH', { weekday: 'short' }),
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                <span className="text-sm text-muted-foreground">ถึง</span>
-
-                <Popover open={openTo} onOpenChange={setOpenTo}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <CalendarIcon className="size-4" />
-                      {toDate ? formatThai(toDate) : 'ถึงวันที่'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={toDate}
-                      onSelect={(d) => { setToDate(d); setPreset(null); if (d) setOpenTo(false); }}
-                      initialFocus
-                      formatters={{
-                        formatCaption: (month) => month.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' }),
-                        formatWeekdayName: (d) => d.toLocaleDateString('th-TH', { weekday: 'short' }),
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-
-                <Button variant="ghost" size="sm" onClick={() => { setFromDate(undefined); setToDate(undefined); setPreset(null); }}>ล้าง</Button>
-                <Button size="sm" onClick={fetchReports} disabled={loading}>
-                  {loading ? <span className="opacity-70">Refreshing...</span> : 'Refresh'}
-                </Button>
-                <div className="relative">
-                  <Input
-                    placeholder="Search... (HN, Report, Service)"
-                    className="w-60 pl-3"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
-              </div>
+            
             </div>
           </CardHeader>
           <CardContent>

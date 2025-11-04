@@ -4,7 +4,6 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch, Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { ConfigProvider } from 'antd';
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Reports from "./pages/Reports";
@@ -39,24 +38,12 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ConfigProvider
-        theme={{
-          token: {
-            colorPrimary: '#6366f1',
-            borderRadius: 8,
-          },
-        }}
-      >
-        <ThemeProvider
-          defaultTheme="light"
-          switchable
-        >
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </ThemeProvider>
-      </ConfigProvider>
+      <ThemeProvider defaultTheme="light" switchable>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

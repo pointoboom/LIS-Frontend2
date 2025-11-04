@@ -1,5 +1,6 @@
-import { Card, Row, Col, Button } from 'antd';
-import { ExperimentOutlined } from '@ant-design/icons';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { FlaskConical } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 
 export default function Category() {
@@ -13,35 +14,27 @@ export default function Category() {
     <DashboardLayout>
       <div className="space-y-6">
         <Card className="shadow-sm">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Category</h2>
-          
-          <Row gutter={24}>
-            {/* Left Column - Categories */}
-            <Col xs={24} md={8}>
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Category</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Left Column - Categories */}
               <div className="space-y-3">
                 {leftCategories.map((category, index) => (
                   <Button
                     key={index}
-                    size="large"
-                    className="w-full h-14 text-lg font-medium"
-                    type={index === 0 ? 'primary' : 'default'}
-                    icon={<ExperimentOutlined />}
+                    className={`w-full h-14 text-lg font-medium flex items-center gap-2 ${index === 0 ? '' : ''}`}
                   >
-                    {category}
+                    <FlaskConical className="w-5 h-5" /> {category}
                   </Button>
                 ))}
               </div>
-            </Col>
-
-            {/* Right Column - Items */}
-            <Col xs={24} md={16}>
-              <div className="space-y-4">
+              {/* Right Column - Items (spans two columns on md+) */}
+              <div className="md:col-span-2 space-y-4">
                 {rightItems.map((section, sectionIndex) => (
                   <div key={sectionIndex}>
                     <div className="bg-purple-100 border border-purple-300 rounded-lg p-3 mb-3">
                       <h3 className="text-lg font-semibold text-purple-800">{section.category}</h3>
                     </div>
-                    
                     <div className="space-y-2">
                       {section.items.map((item, itemIndex) => (
                         <div
@@ -55,8 +48,8 @@ export default function Category() {
                   </div>
                 ))}
               </div>
-            </Col>
-          </Row>
+            </div>
+          </CardContent>
         </Card>
       </div>
     </DashboardLayout>
