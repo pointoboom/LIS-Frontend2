@@ -24,6 +24,19 @@ import { Calendar } from '@/components/ui/calendar';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
 import { Input } from '@/components/ui/input';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip as RTooltip,
+  Legend,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from 'recharts';
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -158,6 +171,8 @@ export default function Dashboard() {
     return `${dd} ${month} ${yyyy}`;
   }
 
+  
+
   const lisResults: Row[] = useMemo(() => {
     const rows: Row[] = [];
     for (const raw of reports as any[]) {
@@ -204,6 +219,54 @@ export default function Dashboard() {
     }
     return rows;
   }, [reports]);
+
+  const stats = useMemo(() => {
+    const total = lisResults.length;
+    const uniqueHN = new Set(lisResults.map(r => r.patient_id || '-')).size;
+    const uniqueServices = new Set(lisResults.map(r => r.service_id || '-')).size;
+    const times = lisResults.map(r => r.received_ts).filter(Boolean) as number[];
+    const minTs = times.length ? Math.min(...times) : null;
+    const maxTs = times.length ? Math.max(...times) : null;
+    return {
+      total,
+      uniqueHN,
+      uniqueServices,
+      from: formatDisplayDate(minTs),
+      to: formatDisplayDate(maxTs),
+    };
+  }, [lisResults]);
+
+  const serviceBreakdown = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of lisResults) {
+      const key = r.service_text || r.service_id || '-';
+      map.set(key, (map.get(key) || 0) + 1);
+    }
+    const entries = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+    const top = entries.slice(0, 6).map(([name, value]) => ({ name, value }));
+    const others = entries.slice(6).reduce((sum, [, v]) => sum + v, 0);
+    if (others > 0) top.push({ name: 'Others', value: others });
+    return top;
+  }, [lisResults]);
+
+  const reportsByDay = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of lisResults) {
+      const ts = r.received_ts;
+      if (ts == null) continue;
+      const d = new Date(ts);
+      const key = `${String(d.getUTCFullYear())}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+      map.set(key, (map.get(key) || 0) + 1);
+    }
+    const entries = Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    // show last 14 days
+    const last14 = entries.slice(-14).map(([date, count]) => {
+      const [y, m, d] = date.split('-').map(Number);
+      const label = new Date(Date.UTC(y, (m || 1) - 1, d || 1)).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+      return { date: label, count };
+    });
+    return last14;
+  }, [lisResults]);
 
   // Filters
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
@@ -413,6 +476,66 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card> */}
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2"><CardTitle className="text-base">Total Reports</CardTitle></CardHeader>
+            <CardContent className="pt-0 text-3xl font-semibold">{stats.total}</CardContent>
+          </Card>
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2"><CardTitle className="text-base">Unique HN</CardTitle></CardHeader>
+            <CardContent className="pt-0 text-3xl font-semibold">{stats.uniqueHN}</CardContent>
+          </Card>
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2"><CardTitle className="text-base">Unique Services</CardTitle></CardHeader>
+            <CardContent className="pt-0 text-3xl font-semibold">{stats.uniqueServices}</CardContent>
+          </Card>
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2"><CardTitle className="text-base">Date Range</CardTitle></CardHeader>
+            <CardContent className="pt-0 text-sm text-muted-foreground">{stats.from} – {stats.to}</CardContent>
+          </Card>
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>Service Breakdown</CardTitle>
+              <CardDescription>Top services by count</CardDescription>
+            </CardHeader>
+            <CardContent style={{ height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={serviceBreakdown} dataKey="value" nameKey="name" outerRadius={90}>
+                    {serviceBreakdown.map((_, idx) => (
+                      <Cell key={`c-${idx}`} fill={["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#06b6d4", "#a855f7", "#94a3b8"][idx % 7]} />
+                    ))}
+                  </Pie>
+                  <RTooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>Reports by Day</CardTitle>
+              <CardDescription>Last 14 days</CardDescription>
+            </CardHeader>
+            <CardContent style={{ height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={reportsByDay}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis allowDecimals={false} />
+                  <RTooltip />
+                  <Bar dataKey="count" fill="#6366f1" radius={[4,4,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* LIS Data Table */}
         <Card className="shadow-sm">
