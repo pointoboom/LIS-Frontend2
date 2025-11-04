@@ -97,7 +97,7 @@ export default function Dashboard() {
     setError(null);
     try {
       // Use relative path so Vite dev proxy and Express prod proxy handle CORS
-      const url = 'http://163.47.10.13:8080/api/v1/lab-reports';
+      const url = 'https://lisapi.entrywisesolutions.com/api/v1/lab-reports';
       const res = await axios.get(url, { timeout: 15000 });
       const data = normalizeApiResponse(res.data);
       if (!Array.isArray(data)) {
@@ -639,7 +639,7 @@ export default function Dashboard() {
                     <TableCell className="text-right">
                       <Button
                         size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"
+                        className="bg-[#2b7fff80] hover:bg-[#2b7fff] text-white border-0"
                         onClick={() => setLocation(`/dashboard/reports?id=${encodeURIComponent(row.id || row.filler_order || row.report_id)}`)}
                       >
                         Open Result

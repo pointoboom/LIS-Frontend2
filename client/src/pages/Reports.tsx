@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, FileImage, FileDown } from 'lucide-react';
+import { useRef } from 'react';
 
 // Import the bundled sample report
 // Note: tsconfig enables resolveJsonModule to allow this import
@@ -96,6 +97,7 @@ function flagBadgeClass(flag?: string | null): string {
 
 export default function Reports() {
   const [, setLocation] = useLocation();
+  const reportRef = useRef<HTMLDivElement>(null);
 
   // Read ID from URL query parameter
   const urlParams = new URLSearchParams(window.location.search);
@@ -114,8 +116,57 @@ export default function Reports() {
 
   const observations = matchedOrder?.observations || [];
 
-  const handleExport = (format: string) => {
+  const handleExport = async (format: string) => {
     const idTag = matchedOrder?.obr?.filler_order || matchedOrder?.obr?.placer_order || data._id?.$oid || 'report';
+    if (format === 'PDF') {
+      const node = reportRef.current;
+      if (!node) return toast.error('Nothing to export');
+
+      // Open a print window with the report content and trigger Save as PDF
+      const printWin = window.open('', '_blank', 'noopener,noreferrer,width=1024,height=768');
+      if (!printWin) return toast.error('Popup blocked. Please allow popups.');
+
+      const title = `Report_${idTag}`;
+      const stylesheets: string[] = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+        .map((l) => (l as HTMLLinkElement).outerHTML);
+      const styleTags: string[] = Array.from(document.querySelectorAll('style'))
+        .map((s) => (s as HTMLStyleElement).outerHTML);
+
+      const inlinePrintCss = `
+        <style>
+          @page { size: A4; margin: 16mm; }
+          html, body { background: #fff; }
+          .print-container { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji"; color: #0f172a; }
+          .print-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+          .print-meta { font-size: 12px; color: #334155; margin-bottom: 16px; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #e2e8f0; padding: 6px 8px; font-size: 12px; }
+          th { background: #f1f5f9; text-transform: uppercase; letter-spacing: .03em; font-weight: 600; }
+          img { max-width: 100%; height: auto; }
+        </style>
+      `;
+
+      printWin.document.write(`<!doctype html><html><head><meta charset="utf-8" />
+        <title>${title}</title>
+        ${stylesheets.join('\n')}
+        ${styleTags.join('\n')}
+        ${inlinePrintCss}
+      </head><body>
+        <div class="print-container">
+          <div class="print-title">Laboratory Report</div>
+          <div class="print-meta">Exported from LIS Dashboard • ID: ${overallId}</div>
+          ${node.innerHTML}
+        </div>
+        <script>
+          window.addEventListener('load', () => {
+            setTimeout(() => { window.print(); }, 100);
+          });
+          window.addEventListener('afterprint', () => { setTimeout(() => window.close(), 50); });
+        <\/script>
+      </body></html>`);
+      printWin.document.close();
+      return;
+    }
     toast.success(`Exporting ${idTag} as ${format}...`);
   };
 
@@ -191,6 +242,7 @@ export default function Reports() {
           <CardContent>
             <Separator className="my-4" />
 
+            <div ref={reportRef}>
             {/* MSH + Received */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <Card className="border-indigo-200 bg-indigo-50 dark:bg-indigo-950/30">
@@ -285,6 +337,7 @@ export default function Reports() {
                 </div>
               </CardContent>
             </Card>
+            </div>
           </CardContent>
         </Card>
       </div>
